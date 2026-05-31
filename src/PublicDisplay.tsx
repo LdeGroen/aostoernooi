@@ -265,18 +265,18 @@ export default function PublicDisplay({ state }: { state: TournamentState }) {
             {/* Battleplan */}
             {showBattleplan && battleplanNum && (
               <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-sm flex flex-col items-center"
-                style={{ minWidth: 240, maxWidth: 320 }}>
+                style={{ minWidth: 420, maxWidth: 560 }}>
                 <h2 className="font-cinzel text-gray-500 text-xs font-bold tracking-widest uppercase mb-1 text-center">
                   Battleplan
                 </h2>
-                <p className="font-cinzel text-gray-800 font-bold text-sm text-center mb-3">
+                <p className="font-cinzel text-gray-800 font-bold text-lg text-center mb-3">
                   {BATTLEPLANS[battleplanNum]}
                 </p>
                 <img
                   src={`${BASE}battleplan${battleplanNum}.png`}
                   alt={BATTLEPLANS[battleplanNum]}
                   className="rounded-xl object-contain flex-1"
-                  style={{ maxHeight: '55vh', maxWidth: '100%' }}
+                  style={{ maxHeight: '70vh', maxWidth: '100%' }}
                 />
               </div>
             )}

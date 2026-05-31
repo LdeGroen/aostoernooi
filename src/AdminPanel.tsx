@@ -141,14 +141,14 @@ function RoundEditor({ state, roundIndex, updateTable, updateBattleplan }: {
                 value={t.player1}
                 onChange={e => updateTable(roundIndex, ti, 'player1', e.target.value)}
                 placeholder="Player 1"
-                className="flex-1 border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <span className="text-gray-400 text-xs font-medium">vs</span>
               <input
                 value={t.player2}
                 onChange={e => updateTable(roundIndex, ti, 'player2', e.target.value)}
                 placeholder="Player 2"
-                className="flex-1 border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           ))}
