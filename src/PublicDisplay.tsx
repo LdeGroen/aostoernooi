@@ -34,15 +34,20 @@ function getNextPhase(remainingMs: number): { label: string; inMs: number } | nu
   return null;
 }
 
-function Timeline({ remainingMs }: { remainingMs: number }) {
+function Timeline({ remainingMs, large = false }: { remainingMs: number; large?: boolean }) {
   const totalMin = 180;
   const elapsedMin = totalMin - remainingMs / 60000;
   const progressPct = Math.min(100, Math.max(0, (elapsedMin / totalMin) * 100));
 
+  const barH = large ? 'h-12' : 'h-7';
+  const labelsH = large ? 64 : 44;
+  const dotSize = large ? 'w-5 h-5' : 'w-3 h-3';
+  const labelText = large ? 'text-xl' : 'text-sm';
+
   return (
-    <div className="w-full mt-3">
+    <div className={`w-full ${large ? 'mt-6' : 'mt-5'}`}>
       {/* Bar */}
-      <div className="relative h-4 rounded-full bg-gray-200 border border-gray-300 overflow-hidden">
+      <div className={`relative ${barH} rounded-full bg-gray-200 border border-gray-300 overflow-hidden`}>
         <div
           className="absolute top-0 left-0 h-full rounded-full transition-all duration-1000"
           style={{ width: `${progressPct}%`, background: 'linear-gradient(90deg, #1e3a5f, #2563eb)' }}
@@ -61,7 +66,7 @@ function Timeline({ remainingMs }: { remainingMs: number }) {
       </div>
 
       {/* Labels below bar */}
-      <div className="relative mt-1" style={{ height: 28 }}>
+      <div className="relative mt-2" style={{ height: labelsH }}>
         {PHASE_MILESTONES.map(m => {
           const pct = (m.elapsedMin / totalMin) * 100;
           const active = elapsedMin >= m.elapsedMin;
@@ -75,8 +80,8 @@ function Timeline({ remainingMs }: { remainingMs: number }) {
               className="absolute flex flex-col items-center"
               style={{ left: `${pct}%`, transform: 'translateX(-50%)' }}
             >
-              <div className={`w-2 h-2 rounded-full border-2 ${active ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-400'}`} />
-              <span className={`text-[10px] font-semibold mt-0.5 whitespace-nowrap ${isCurrent ? 'text-blue-700' : active ? 'text-gray-600' : 'text-gray-400'}`}>
+              <div className={`${dotSize} rounded-full border-2 ${active ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-400'}`} />
+              <span className={`${labelText} font-semibold mt-1 whitespace-nowrap ${isCurrent ? 'text-blue-700' : active ? 'text-gray-600' : 'text-gray-400'}`}>
                 {m.short}
               </span>
             </div>
@@ -102,12 +107,12 @@ function TableGrid({ state, roundIndex }: { state: TournamentState; roundIndex: 
       {tables.map(t => (
         <div
           key={t.tableNumber}
-          className="flex items-center gap-3 px-5 py-3 rounded-xl border-2 border-gray-200 bg-gray-50"
+          className="flex items-center gap-3 px-6 py-5 rounded-xl border-2 border-gray-200 bg-gray-50"
         >
-          <span className="text-blue-700 font-black font-cinzel text-2xl w-8 text-center shrink-0">{t.tableNumber}</span>
-          <span className="flex-1 text-gray-900 font-semibold text-xl truncate">{t.player1 || '—'}</span>
-          <span className="text-gray-400 font-medium text-sm px-2">vs</span>
-          <span className="flex-1 text-gray-900 font-semibold text-xl truncate text-right">{t.player2 || '—'}</span>
+          <span className="text-blue-700 font-black font-cinzel text-3xl w-10 text-center shrink-0">{t.tableNumber}</span>
+          <span className="flex-1 text-gray-900 font-semibold text-2xl truncate">{t.player1 || '—'}</span>
+          <span className="text-gray-400 font-medium text-base px-2">vs</span>
+          <span className="flex-1 text-gray-900 font-semibold text-2xl truncate text-right">{t.player2 || '—'}</span>
         </div>
       ))}
     </div>
@@ -208,8 +213,8 @@ export default function PublicDisplay({ state }: { state: TournamentState }) {
           </div>
         )}
 
-        {/* === ROUND ACTIVE === */}
-        {state.phase === 'round-active' && (
+        {/* === ROUND ACTIVE — compact (tables still on screen) === */}
+        {state.phase === 'round-active' && showTables && (
           <div className="rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-6">
               <div className="flex-1 min-w-0">
@@ -234,6 +239,33 @@ export default function PublicDisplay({ state }: { state: TournamentState }) {
               </div>
             </div>
             <Timeline remainingMs={remainingMs} />
+          </div>
+        )}
+
+        {/* === ROUND ACTIVE — centered (tables gone, timer takes over) === */}
+        {state.phase === 'round-active' && !showTables && (
+          <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 px-4">
+            <p className="text-blue-600 font-bold tracking-widest uppercase"
+              style={{ fontSize: 'clamp(1rem, 2vw, 1.5rem)' }}>
+              Round {state.currentRound} of {state.totalRounds}
+            </p>
+            <p className="font-cinzel font-bold text-gray-900 leading-tight"
+              style={{ fontSize: 'clamp(1.75rem, 4.5vw, 3.5rem)' }}>
+              {currentPhase?.label ?? ''}
+            </p>
+            <div className={`font-cinzel font-black tabular-nums leading-none ${timerColor}`}
+              style={{ fontSize: 'clamp(5rem, 18vw, 13rem)' }}>
+              {formatTime(remainingMs)}
+            </div>
+            <p className="text-gray-400 tracking-widest uppercase text-sm">remaining</p>
+            {nextPhase && (
+              <p className="text-gray-400" style={{ fontSize: 'clamp(1rem, 1.8vw, 1.4rem)' }}>
+                Next: <span className="text-gray-600 font-medium">{nextPhase.label}</span> in {formatTime(nextPhase.inMs)}
+              </p>
+            )}
+            <div className="w-full max-w-6xl mt-4">
+              <Timeline remainingMs={remainingMs} large />
+            </div>
           </div>
         )}
 
@@ -265,18 +297,18 @@ export default function PublicDisplay({ state }: { state: TournamentState }) {
             {/* Battleplan */}
             {showBattleplan && battleplanNum && (
               <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-sm flex flex-col items-center"
-                style={{ minWidth: 420, maxWidth: 560 }}>
+                style={{ minWidth: 560, maxWidth: 820 }}>
                 <h2 className="font-cinzel text-gray-500 text-xs font-bold tracking-widest uppercase mb-1 text-center">
                   Battleplan
                 </h2>
-                <p className="font-cinzel text-gray-800 font-bold text-lg text-center mb-3">
+                <p className="font-cinzel text-gray-800 font-bold text-xl text-center mb-3">
                   {BATTLEPLANS[battleplanNum]}
                 </p>
                 <img
                   src={`${BASE}battleplan${battleplanNum}.png`}
                   alt={BATTLEPLANS[battleplanNum]}
                   className="rounded-xl object-contain flex-1"
-                  style={{ maxHeight: '70vh', maxWidth: '100%' }}
+                  style={{ maxHeight: '82vh', maxWidth: '100%' }}
                 />
               </div>
             )}

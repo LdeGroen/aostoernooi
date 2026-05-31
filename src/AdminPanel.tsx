@@ -121,7 +121,7 @@ function RoundEditor({ state, roundIndex, updateTable, updateBattleplan }: {
             <img
               src={`${BASE}battleplan${round.battleplan}.png`}
               alt="preview"
-              className="h-16 rounded border border-gray-200 object-contain"
+              className="h-28 rounded border border-gray-200 object-contain"
             />
             <span className="text-sm text-gray-600 font-medium">{BATTLEPLANS[round.battleplan]}</span>
           </div>
