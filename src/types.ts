@@ -1,7 +1,12 @@
+export interface Player {
+  id: string;
+  name: string;
+}
+
 export interface TableAssignment {
   tableNumber: number;
-  player1: string;
-  player2: string;
+  player1Id: string | null;
+  player2Id: string | null;
 }
 
 export type TournamentPhase =
@@ -18,6 +23,7 @@ export interface RoundConfig {
 
 export interface TournamentState {
   title: string;
+  players: Player[];
   numTables: number;
   totalRounds: number;
   roundDurationMinutes: number;

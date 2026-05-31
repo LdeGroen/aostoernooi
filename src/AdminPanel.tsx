@@ -1,7 +1,13 @@
 import { useState } from 'react';
-import type { TournamentState } from './types';
+import type { TournamentState, Player } from './types';
 import { BATTLEPLANS } from './types';
 import { useCountdown, formatTime } from './useCountdown';
+
+type Slot = 'player1Id' | 'player2Id';
+interface DragPayload {
+  playerId: string;
+  from: 'pool' | { tableIndex: number; slot: Slot };
+}
 
 const PASSWORD = 'GelderlandInvitational';
 const BASE = import.meta.env.BASE_URL;
@@ -9,12 +15,16 @@ const BASE = import.meta.env.BASE_URL;
 interface Props {
   state: TournamentState;
   updateTitle: (t: string) => void;
-  updateNumTables: (n: number) => void;
+  addPlayer: (name: string) => void;
+  updatePlayerName: (id: string, name: string) => void;
+  removePlayer: (id: string) => void;
+  assignSlot: (ri: number, ti: number, slot: Slot, playerId: string) => void;
+  clearSlot: (ri: number, ti: number, slot: Slot) => void;
+  swapSlots: (ri: number, a: { tableIndex: number; slot: Slot }, b: { tableIndex: number; slot: Slot }) => void;
   updatePreGame: (n: number) => void;
   updateLunchBreak: (n: number) => void;
   updateShortBreak: (n: number) => void;
   updateAnnouncementText: (t: string) => void;
-  updateTable: (ri: number, ti: number, field: 'player1' | 'player2', val: string) => void;
   updateBattleplan: (ri: number, bp: number | null) => void;
   startPreGame: () => void;
   startRound: (r: number) => void;
@@ -76,14 +86,114 @@ function NumInput({ label, value, onChange, min = 1 }: {
   );
 }
 
-function RoundEditor({ state, roundIndex, updateTable, updateBattleplan }: {
+function setDrag(e: React.DragEvent, payload: DragPayload) {
+  e.dataTransfer.setData('application/json', JSON.stringify(payload));
+  e.dataTransfer.effectAllowed = 'move';
+}
+function getDrag(e: React.DragEvent): DragPayload | null {
+  try { return JSON.parse(e.dataTransfer.getData('application/json')) as DragPayload; }
+  catch { return null; }
+}
+
+function PlayerChip({ name, draggable, onDragStart, onRemove, muted = false }: {
+  name: string;
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onRemove?: () => void;
+  muted?: boolean;
+}) {
+  return (
+    <div
+      draggable={draggable}
+      onDragStart={onDragStart}
+      className={`group flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm select-none ${
+        muted
+          ? 'bg-gray-50 border-gray-200 text-gray-400'
+          : 'bg-white border-gray-300 text-gray-800 shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400'
+      }`}
+    >
+      <span className="truncate">{name}</span>
+      {onRemove && (
+        <button
+          onClick={onRemove}
+          className="text-gray-300 hover:text-red-500 leading-none text-base shrink-0"
+          title="Remove"
+        >
+          ×
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SlotBox({ name, empty, onDrop, onDragStart, onClear }: {
+  name: string;
+  empty: boolean;
+  onDrop: (e: React.DragEvent) => void;
+  onDragStart?: (e: React.DragEvent) => void;
+  onClear?: () => void;
+}) {
+  const [over, setOver] = useState(false);
+  return (
+    <div
+      onDragOver={e => { e.preventDefault(); setOver(true); }}
+      onDragLeave={() => setOver(false)}
+      onDrop={e => { e.preventDefault(); setOver(false); onDrop(e); }}
+      className={`flex-1 min-w-0 rounded-lg border px-2.5 py-1.5 text-sm transition-colors ${
+        over ? 'border-blue-500 bg-blue-50'
+        : empty ? 'border-dashed border-gray-300 bg-gray-50'
+        : 'border-gray-300 bg-white'
+      }`}
+    >
+      {empty ? (
+        <span className="text-gray-300">Drop player…</span>
+      ) : (
+        <div
+          draggable
+          onDragStart={onDragStart}
+          className="flex items-center justify-between gap-1.5 cursor-grab active:cursor-grabbing"
+        >
+          <span className="truncate text-gray-800">{name}</span>
+          {onClear && (
+            <button onClick={onClear} className="text-gray-300 hover:text-red-500 leading-none text-base shrink-0" title="Unassign">×</button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RoundEditor({ state, roundIndex, assignSlot, clearSlot, swapSlots, updateBattleplan }: {
   state: TournamentState;
   roundIndex: number;
-  updateTable: Props['updateTable'];
+  assignSlot: Props['assignSlot'];
+  clearSlot: Props['clearSlot'];
+  swapSlots: Props['swapSlots'];
   updateBattleplan: Props['updateBattleplan'];
 }) {
   const round = state.rounds[roundIndex];
   if (!round) return null;
+
+  const nameOf = (id: string | null) => state.players.find(p => p.id === id)?.name ?? '';
+
+  const assignedIds = new Set<string>();
+  round.tables.forEach(t => { if (t.player1Id) assignedIds.add(t.player1Id); if (t.player2Id) assignedIds.add(t.player2Id); });
+  const available = state.players.filter(p => !assignedIds.has(p.id));
+
+  const handleDropOnSlot = (tableIndex: number, slot: Slot) => (e: React.DragEvent) => {
+    const d = getDrag(e);
+    if (!d) return;
+    if (typeof d.from === 'object') {
+      swapSlots(roundIndex, d.from, { tableIndex, slot });
+    } else {
+      assignSlot(roundIndex, tableIndex, slot, d.playerId);
+    }
+  };
+
+  const handleDropOnPool = (e: React.DragEvent) => {
+    const d = getDrag(e);
+    if (d && typeof d.from === 'object') clearSlot(roundIndex, d.from.tableIndex, d.from.slot);
+  };
 
   return (
     <div className="space-y-4">
@@ -128,32 +238,120 @@ function RoundEditor({ state, roundIndex, updateTable, updateBattleplan }: {
         )}
       </div>
 
-      {/* Table assignments */}
-      <div>
-        <p className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-2">Table Assignments</p>
-        <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
-          {round.tables.map((t, ti) => (
-            <div key={t.tableNumber} className="flex items-center gap-2">
-              <span className="text-blue-700 font-bold font-cinzel text-sm w-6 text-center shrink-0">
-                {t.tableNumber}
-              </span>
-              <input
-                value={t.player1}
-                onChange={e => updateTable(roundIndex, ti, 'player1', e.target.value)}
-                placeholder="Player 1"
-                className="flex-1 border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <span className="text-gray-400 text-xs font-medium">vs</span>
-              <input
-                value={t.player2}
-                onChange={e => updateTable(roundIndex, ti, 'player2', e.target.value)}
-                placeholder="Player 2"
-                className="flex-1 border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+      {/* Available players pool */}
+      <div
+        onDragOver={e => e.preventDefault()}
+        onDrop={e => { e.preventDefault(); handleDropOnPool(e); }}
+      >
+        <p className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-2">
+          Available players — drag onto a table ({available.length})
+        </p>
+        <div className="flex flex-wrap gap-1.5 min-h-[2.5rem] rounded-lg border border-dashed border-gray-200 bg-gray-50 p-2">
+          {state.players.length === 0 && (
+            <span className="text-gray-400 text-sm">Add players in the Players section above.</span>
+          )}
+          {state.players.length > 0 && available.length === 0 && (
+            <span className="text-gray-400 text-sm">All players are seated.</span>
+          )}
+          {available.map(p => (
+            <PlayerChip
+              key={p.id}
+              name={p.name || '(no name)'}
+              draggable
+              onDragStart={e => setDrag(e, { playerId: p.id, from: 'pool' })}
+            />
           ))}
         </div>
       </div>
+
+      {/* Tables */}
+      <div>
+        <p className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-2">Tables</p>
+        {round.tables.length === 0 ? (
+          <p className="text-gray-400 text-sm">Tables appear automatically as you add players.</p>
+        ) : (
+          <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
+            {round.tables.map((t, ti) => (
+              <div key={t.tableNumber} className="flex items-center gap-2">
+                <span className="text-blue-700 font-bold font-cinzel text-sm w-6 text-center shrink-0">
+                  {t.tableNumber}
+                </span>
+                <SlotBox
+                  empty={!t.player1Id}
+                  name={nameOf(t.player1Id) || '(no name)'}
+                  onDrop={handleDropOnSlot(ti, 'player1Id')}
+                  onDragStart={e => t.player1Id && setDrag(e, { playerId: t.player1Id, from: { tableIndex: ti, slot: 'player1Id' } })}
+                  onClear={() => clearSlot(roundIndex, ti, 'player1Id')}
+                />
+                <span className="text-gray-400 text-xs font-medium shrink-0">vs</span>
+                <SlotBox
+                  empty={!t.player2Id}
+                  name={nameOf(t.player2Id) || '(no name)'}
+                  onDrop={handleDropOnSlot(ti, 'player2Id')}
+                  onDragStart={e => t.player2Id && setDrag(e, { playerId: t.player2Id, from: { tableIndex: ti, slot: 'player2Id' } })}
+                  onClear={() => clearSlot(roundIndex, ti, 'player2Id')}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PlayersCard({ players, addPlayer, updatePlayerName, removePlayer }: {
+  players: Player[];
+  addPlayer: Props['addPlayer'];
+  updatePlayerName: Props['updatePlayerName'];
+  removePlayer: Props['removePlayer'];
+}) {
+  const [newName, setNewName] = useState('');
+  const add = () => {
+    const n = newName.trim();
+    if (!n) return;
+    addPlayer(n);
+    setNewName('');
+  };
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <input
+          value={newName}
+          onChange={e => setNewName(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && add()}
+          placeholder="Player name"
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <Btn onClick={add} variant="primary">+ Add player</Btn>
+      </div>
+      {players.length === 0 ? (
+        <p className="text-gray-400 text-sm">No players yet. Add players, then drag them onto tables per round.</p>
+      ) : (
+        <>
+          <p className="text-gray-500 text-xs font-medium uppercase tracking-wider">
+            {players.length} players → {Math.ceil(players.length / 2)} tables
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {players.map(p => (
+              <div key={p.id} className="flex items-center gap-1">
+                <input
+                  value={p.name}
+                  onChange={e => updatePlayerName(p.id, e.target.value)}
+                  className="flex-1 min-w-0 border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={() => removePlayer(p.id)}
+                  className="text-gray-300 hover:text-red-500 leading-none text-lg px-1 shrink-0"
+                  title="Remove player"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -297,13 +495,22 @@ export default function AdminPanel(props: Props) {
                 />
               </label>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <NumInput label="Tables" value={state.numTables} onChange={props.updateNumTables} />
+            <div className="grid grid-cols-3 gap-3">
               <NumInput label="Pre-game (min)" value={state.preGameDurationMinutes} onChange={props.updatePreGame} />
               <NumInput label="Lunch Break (min)" value={state.lunchBreakMinutes} onChange={props.updateLunchBreak} />
               <NumInput label="Short Break (min)" value={state.shortBreakMinutes} onChange={props.updateShortBreak} />
             </div>
           </div>
+        </Card>
+
+        {/* === PLAYERS === */}
+        <Card title="Players">
+          <PlayersCard
+            players={state.players}
+            addPlayer={props.addPlayer}
+            updatePlayerName={props.updatePlayerName}
+            removePlayer={props.removePlayer}
+          />
         </Card>
 
         {/* === ANNOUNCEMENT === */}
@@ -340,7 +547,9 @@ export default function AdminPanel(props: Props) {
           <RoundEditor
             state={state}
             roundIndex={activeTab}
-            updateTable={props.updateTable}
+            assignSlot={props.assignSlot}
+            clearSlot={props.clearSlot}
+            swapSlots={props.swapSlots}
             updateBattleplan={props.updateBattleplan}
           />
         </Card>

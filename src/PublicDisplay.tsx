@@ -95,7 +95,8 @@ function Timeline({ remainingMs, large = false }: { remainingMs: number; large?:
 function TableGrid({ state, roundIndex }: { state: TournamentState; roundIndex: number }) {
   const round = state.rounds[roundIndex];
   if (!round) return null;
-  const tables = round.tables.filter(t => t.player1 || t.player2);
+  const nameOf = (id: string | null) => state.players.find(p => p.id === id)?.name ?? '';
+  const tables = round.tables.filter(t => t.player1Id || t.player2Id);
   if (tables.length === 0) return (
     <p className="text-gray-400 text-center py-4 text-lg">No table assignments entered yet</p>
   );
@@ -110,9 +111,9 @@ function TableGrid({ state, roundIndex }: { state: TournamentState; roundIndex: 
           className="flex items-center gap-3 px-6 py-5 rounded-xl border-2 border-gray-200 bg-gray-50"
         >
           <span className="text-blue-700 font-black font-cinzel text-3xl w-10 text-center shrink-0">{t.tableNumber}</span>
-          <span className="flex-1 text-gray-900 font-semibold text-2xl truncate">{t.player1 || '—'}</span>
+          <span className="flex-1 text-gray-900 font-semibold text-2xl truncate">{nameOf(t.player1Id) || '—'}</span>
           <span className="text-gray-400 font-medium text-base px-2">vs</span>
-          <span className="flex-1 text-gray-900 font-semibold text-2xl truncate text-right">{t.player2 || '—'}</span>
+          <span className="flex-1 text-gray-900 font-semibold text-2xl truncate text-right">{nameOf(t.player2Id) || '—'}</span>
         </div>
       ))}
     </div>

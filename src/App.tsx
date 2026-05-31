@@ -67,12 +67,16 @@ function App() {
             <AdminPanel
               state={t.state}
               updateTitle={t.updateTitle}
-              updateNumTables={t.updateNumTables}
+              addPlayer={t.addPlayer}
+              updatePlayerName={t.updatePlayerName}
+              removePlayer={t.removePlayer}
+              assignSlot={t.assignSlot}
+              clearSlot={t.clearSlot}
+              swapSlots={t.swapSlots}
               updatePreGame={t.updatePreGame}
               updateLunchBreak={t.updateLunchBreak}
               updateShortBreak={t.updateShortBreak}
               updateAnnouncementText={t.updateAnnouncementText}
-              updateTable={t.updateTable}
               updateBattleplan={t.updateBattleplan}
               startPreGame={t.startPreGame}
               startRound={t.startRound}
