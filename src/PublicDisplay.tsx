@@ -1,74 +1,82 @@
 import { useMemo } from 'react';
 import type { TournamentState } from './types';
-import { ROUND_PHASES } from './types';
+import { ROUND_PHASES, BATTLEPLANS } from './types';
 import { useCountdown, formatTime } from './useCountdown';
 
 const BASE = import.meta.env.BASE_URL;
 
-interface Props {
-  state: TournamentState;
-}
+const PHASE_MILESTONES = [
+  { elapsedMin: 0,   label: 'Start',      short: 'Start' },
+  { elapsedMin: 10,  label: 'Deployment', short: 'Deploy' },
+  { elapsedMin: 70,  label: 'BR 1',       short: 'BR1' },
+  { elapsedMin: 110, label: 'BR 2',       short: 'BR2' },
+  { elapsedMin: 140, label: 'BR 3',       short: 'BR3' },
+  { elapsedMin: 160, label: 'BR 4',       short: 'BR4' },
+  { elapsedMin: 170, label: 'BR 5',       short: 'BR5' },
+];
 
-function getCurrentPhaseLabel(remainingMs: number): string {
+function getCurrentPhase(remainingMs: number) {
   const remainingMin = remainingMs / 60000;
-  for (const phase of ROUND_PHASES) {
-    if (remainingMin >= phase.minRemaining) return phase.label;
+  for (let i = 0; i < ROUND_PHASES.length; i++) {
+    if (remainingMin >= ROUND_PHASES[i].minRemaining) return { phase: ROUND_PHASES[i], index: i };
   }
-  return ROUND_PHASES[ROUND_PHASES.length - 1].label;
+  return { phase: ROUND_PHASES[ROUND_PHASES.length - 1], index: ROUND_PHASES.length - 1 };
 }
 
-function getNextPhaseIn(remainingMs: number): { label: string; inMs: number } | null {
+function getNextPhase(remainingMs: number): { label: string; inMs: number } | null {
   const remainingMin = remainingMs / 60000;
   for (let i = 0; i < ROUND_PHASES.length - 1; i++) {
-    const cur = ROUND_PHASES[i];
-    const next = ROUND_PHASES[i + 1];
-    if (remainingMin >= cur.minRemaining) {
-      const inMs = (remainingMin - cur.minRemaining) * 60000;
-      return { label: next.label, inMs };
+    if (remainingMin >= ROUND_PHASES[i].minRemaining) {
+      const inMs = (remainingMin - ROUND_PHASES[i].minRemaining) * 60000;
+      return { label: ROUND_PHASES[i + 1].label, inMs };
     }
   }
   return null;
 }
 
-function PhaseTimeline({ remainingMs }: { remainingMs: number }) {
-  const remainingMin = remainingMs / 60000;
+function Timeline({ remainingMs }: { remainingMs: number }) {
   const totalMin = 180;
-  const elapsed = totalMin - remainingMin;
-  const progressPct = Math.min(100, (elapsed / totalMin) * 100);
-
-  const milestones = [
-    { at: 0, label: 'Start', short: 'Start' },
-    { at: 10, label: 'Deployment', short: 'Deploy' },
-    { at: 70, label: 'GR 1', short: 'GR1' },
-    { at: 110, label: 'GR 2', short: 'GR2' },
-    { at: 140, label: 'GR 3', short: 'GR3' },
-    { at: 160, label: 'GR 4', short: 'GR4' },
-    { at: 170, label: 'GR 5', short: 'GR5' },
-  ];
+  const elapsedMin = totalMin - remainingMs / 60000;
+  const progressPct = Math.min(100, Math.max(0, (elapsedMin / totalMin) * 100));
 
   return (
-    <div className="w-full px-4 py-2">
-      <div className="relative h-3 rounded-full bg-amber-950/60 border border-amber-800/40 overflow-hidden">
+    <div className="w-full mt-3">
+      {/* Bar */}
+      <div className="relative h-4 rounded-full bg-gray-200 border border-gray-300 overflow-hidden">
         <div
           className="absolute top-0 left-0 h-full rounded-full transition-all duration-1000"
-          style={{
-            width: `${progressPct}%`,
-            background: 'linear-gradient(90deg, #78350f, #c9a84c)',
-          }}
+          style={{ width: `${progressPct}%`, background: 'linear-gradient(90deg, #1e3a5f, #2563eb)' }}
         />
-      </div>
-      <div className="relative mt-1 flex justify-between">
-        {milestones.map(m => {
-          const pct = (m.at / totalMin) * 100;
-          const active = elapsed >= m.at;
+        {/* Milestone ticks */}
+        {PHASE_MILESTONES.slice(1).map(m => {
+          const pct = (m.elapsedMin / totalMin) * 100;
           return (
             <div
-              key={m.at}
-              className="flex flex-col items-center"
-              style={{ position: 'absolute', left: `${pct}%`, transform: 'translateX(-50%)' }}
+              key={m.elapsedMin}
+              className="absolute top-0 bottom-0 w-px bg-gray-400/60"
+              style={{ left: `${pct}%` }}
+            />
+          );
+        })}
+      </div>
+
+      {/* Labels below bar */}
+      <div className="relative mt-1" style={{ height: 28 }}>
+        {PHASE_MILESTONES.map(m => {
+          const pct = (m.elapsedMin / totalMin) * 100;
+          const active = elapsedMin >= m.elapsedMin;
+          const isCurrent = (() => {
+            const next = PHASE_MILESTONES[PHASE_MILESTONES.indexOf(m) + 1];
+            return active && (!next || elapsedMin < next.elapsedMin);
+          })();
+          return (
+            <div
+              key={m.elapsedMin}
+              className="absolute flex flex-col items-center"
+              style={{ left: `${pct}%`, transform: 'translateX(-50%)' }}
             >
-              <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${active ? 'bg-amber-400' : 'bg-amber-900'}`} />
-              <span className={`text-[10px] mt-0.5 whitespace-nowrap ${active ? 'text-amber-300' : 'text-amber-800'}`}>
+              <div className={`w-2 h-2 rounded-full border-2 ${active ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-400'}`} />
+              <span className={`text-[10px] font-semibold mt-0.5 whitespace-nowrap ${isCurrent ? 'text-blue-700' : active ? 'text-gray-600' : 'text-gray-400'}`}>
                 {m.short}
               </span>
             </div>
@@ -79,208 +87,196 @@ function PhaseTimeline({ remainingMs }: { remainingMs: number }) {
   );
 }
 
-function TableGrid({ state }: { state: TournamentState }) {
-  const round = state.rounds[state.currentRound - 1];
+function TableGrid({ state, roundIndex }: { state: TournamentState; roundIndex: number }) {
+  const round = state.rounds[roundIndex];
   if (!round) return null;
   const tables = round.tables.filter(t => t.player1 || t.player2);
-  if (tables.length === 0) return null;
+  if (tables.length === 0) return (
+    <p className="text-gray-400 text-center py-4 text-lg">No table assignments entered yet</p>
+  );
 
-  const cols = tables.length <= 6 ? 2 : tables.length <= 12 ? 3 : 4;
+  const cols = tables.length <= 4 ? 1 : tables.length <= 8 ? 2 : 3;
 
   return (
-    <div
-      className="grid gap-2 w-full"
-      style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
-    >
+    <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
       {tables.map(t => (
         <div
           key={t.tableNumber}
-          className="rounded border border-amber-800/30 bg-amber-950/20 px-3 py-2 flex items-center gap-2 text-sm"
+          className="flex items-center gap-3 px-5 py-3 rounded-xl border-2 border-gray-200 bg-gray-50"
         >
-          <span className="text-amber-600 font-bold font-cinzel w-6 shrink-0 text-center">{t.tableNumber}</span>
-          <span className="text-amber-100 flex-1 truncate">{t.player1 || '—'}</span>
-          <span className="text-amber-600 text-xs">vs</span>
-          <span className="text-amber-100 flex-1 truncate text-right">{t.player2 || '—'}</span>
+          <span className="text-blue-700 font-black font-cinzel text-2xl w-8 text-center shrink-0">{t.tableNumber}</span>
+          <span className="flex-1 text-gray-900 font-semibold text-xl truncate">{t.player1 || '—'}</span>
+          <span className="text-gray-400 font-medium text-sm px-2">vs</span>
+          <span className="flex-1 text-gray-900 font-semibold text-xl truncate text-right">{t.player2 || '—'}</span>
         </div>
       ))}
     </div>
   );
 }
 
-export default function PublicDisplay({ state }: Props) {
+export default function PublicDisplay({ state }: { state: TournamentState }) {
   const remainingMs = useCountdown(state);
+
+  const { phase: currentPhase } = useMemo(() =>
+    state.phase === 'round-active' ? getCurrentPhase(remainingMs) : { phase: null, index: -1 },
+    [state.phase, remainingMs]
+  );
+
+  const nextPhase = useMemo(() =>
+    state.phase === 'round-active' ? getNextPhase(remainingMs) : null,
+    [state.phase, remainingMs]
+  );
+
   const remainingMin = remainingMs / 60000;
-
-  const phaseLabel = useMemo(() => {
-    if (state.phase === 'round-active') return getCurrentPhaseLabel(remainingMs);
-    return null;
-  }, [state.phase, remainingMs]);
-
-  const nextPhase = useMemo(() => {
-    if (state.phase === 'round-active') return getNextPhaseIn(remainingMs);
-    return null;
-  }, [state.phase, remainingMs]);
-
-  // Show tables: pre-tournament, break, or first 30 min of a round
+  // Show tables during: pre-tournament, pre-game, break, or first 30 min of round (>150 min remaining)
   const showTables =
     state.phase === 'pre-tournament' ||
+    state.phase === 'pre-game' ||
     state.phase === 'break' ||
     (state.phase === 'round-active' && remainingMin >= 150);
 
-  // Show battleplan: same conditions as tables
   const showBattleplan = showTables;
 
-  const currentRoundConfig = state.rounds[state.currentRound - 1];
-  const battleplan = currentRoundConfig?.battleplan ?? null;
+  const displayRoundIndex = state.phase === 'break'
+    ? state.currentRound      // show next round's tables during break
+    : state.currentRound - 1;
 
-  // Determine which round's tables to show during break (next round)
-  const tableRound =
-    state.phase === 'break'
-      ? state.currentRound // next round
-      : state.currentRound;
+  const roundConfig = state.rounds[displayRoundIndex] ?? state.rounds[0];
+  const battleplanNum = roundConfig?.battleplan ?? null;
 
-  const tableRoundConfig = state.rounds[tableRound - 1] ?? state.rounds[0];
+  const timerColor = remainingMs < 600000
+    ? 'text-red-600'
+    : remainingMs < 1800000
+    ? 'text-orange-500'
+    : 'text-gray-900';
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center"
-      style={{ background: 'linear-gradient(160deg, #0a0806 0%, #130f07 60%, #0d0a04 100%)' }}
-    >
-      {/* Decorative top border */}
-      <div className="w-full h-1" style={{ background: 'linear-gradient(90deg, transparent, #c9a84c, transparent)' }} />
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Top accent bar */}
+      <div className="h-1.5 bg-blue-800 w-full" />
 
       {/* Title */}
-      <div className="text-center pt-6 pb-3 px-8">
+      <div className="text-center py-5 px-8 border-b border-gray-200">
         <h1
-          className="font-cinzel font-black tracking-widest uppercase"
-          style={{
-            fontSize: 'clamp(2rem, 5vw, 4rem)',
-            color: '#c9a84c',
-            textShadow: '0 0 40px rgba(201,168,76,0.4), 0 2px 4px rgba(0,0,0,0.8)',
-            letterSpacing: '0.15em',
-          }}
+          className="font-cinzel font-black tracking-widest uppercase text-gray-900"
+          style={{ fontSize: 'clamp(2rem, 5.5vw, 4.5rem)', letterSpacing: '0.12em' }}
         >
           {state.title}
         </h1>
-        <div className="flex items-center justify-center gap-3 mt-1">
-          <div className="h-px flex-1 max-w-32" style={{ background: 'linear-gradient(90deg, transparent, #8b6914)' }} />
-          <span className="text-amber-700 text-xs tracking-widest uppercase font-cinzel">
-            Warhammer Age of Sigmar
-          </span>
-          <div className="h-px flex-1 max-w-32" style={{ background: 'linear-gradient(90deg, #8b6914, transparent)' }} />
-        </div>
+        <p className="text-blue-700 text-xs font-semibold tracking-widest uppercase mt-1">
+          Warhammer Age of Sigmar
+        </p>
       </div>
 
-      {/* Main content area */}
-      <div className="flex-1 w-full flex flex-col items-center gap-4 px-6 pb-6 max-w-7xl">
+      {/* Main content */}
+      <div className="flex-1 flex flex-col p-6 gap-5 max-w-screen-2xl mx-auto w-full">
 
-        {/* Phase banner + timer */}
-        <div
-          className="w-full rounded-xl border flex flex-col items-center py-5 px-6"
-          style={{ borderColor: '#8b6914', background: 'rgba(19,15,7,0.8)' }}
-        >
-          {state.phase === 'pre-tournament' && (
-            <div className="text-center">
-              <p className="font-cinzel text-amber-400 text-2xl font-bold tracking-wider">Klaar voor de strijd</p>
-              <p className="text-amber-700 mt-1 text-sm">Het toernooi begint binnenkort</p>
+        {/* === PRE-TOURNAMENT === */}
+        {state.phase === 'pre-tournament' && (
+          <div className="rounded-2xl border-2 border-gray-200 bg-gray-50 p-8 text-center">
+            <p className="font-cinzel text-3xl font-bold text-gray-700">Ready for Battle</p>
+            <p className="text-gray-400 mt-2">The tournament will begin shortly</p>
+          </div>
+        )}
+
+        {/* === PRE-GAME COUNTDOWN === */}
+        {state.phase === 'pre-game' && (
+          <div className="rounded-2xl border-2 border-blue-200 bg-blue-50 p-8 text-center">
+            <p className="font-cinzel text-blue-700 text-xl font-bold tracking-widest uppercase mb-2">
+              Round 1 starts in
+            </p>
+            <div className={`font-cinzel font-black tabular-nums ${timerColor}`}
+              style={{ fontSize: 'clamp(3rem, 10vw, 6rem)', lineHeight: 1 }}>
+              {formatTime(remainingMs)}
             </div>
-          )}
+          </div>
+        )}
 
-          {state.phase === 'finished' && (
-            <div className="text-center">
-              <p className="font-cinzel text-amber-400 text-3xl font-bold tracking-wider">Toernooi afgelopen!</p>
-              <p className="text-amber-600 mt-1">Goed gevochten, strijders</p>
+        {/* === BREAK === */}
+        {state.phase === 'break' && (
+          <div className="rounded-2xl border-2 border-gray-200 bg-gray-50 p-6 text-center">
+            <p className="font-cinzel text-gray-500 text-lg font-bold tracking-widest uppercase">
+              {state.currentRound === 1 ? 'Lunch Break' : 'Short Break'}
+            </p>
+            <div className={`font-cinzel font-black tabular-nums ${timerColor}`}
+              style={{ fontSize: 'clamp(3rem, 10vw, 6rem)', lineHeight: 1 }}>
+              {formatTime(remainingMs)}
             </div>
-          )}
+            <p className="text-gray-400 mt-2 text-sm">
+              Round {state.currentRound + 1} table assignments below
+            </p>
+          </div>
+        )}
 
-          {state.phase === 'break' && (
-            <div className="text-center w-full">
-              <p className="font-cinzel text-amber-500 text-lg tracking-widest uppercase">Pauze</p>
-              <div
-                className="font-cinzel font-black tabular-nums"
-                style={{
-                  fontSize: 'clamp(3rem, 10vw, 6rem)',
-                  color: remainingMs < 60000 ? '#ef4444' : '#c9a84c',
-                  textShadow: '0 0 30px rgba(201,168,76,0.5)',
-                  lineHeight: 1,
-                }}
-              >
-                {formatTime(remainingMs)}
-              </div>
-              <p className="text-amber-700 text-sm mt-2">
-                Ronde {state.currentRound + 1} begint over {formatTime(remainingMs)}
-              </p>
-            </div>
-          )}
-
-          {state.phase === 'round-active' && (
-            <div className="w-full">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="font-cinzel text-amber-600 text-sm tracking-widest uppercase">
-                    Ronde {state.currentRound} van {state.totalRounds}
+        {/* === ROUND ACTIVE === */}
+        {state.phase === 'round-active' && (
+          <div className="rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-6">
+              <div className="flex-1 min-w-0">
+                <p className="text-blue-600 text-sm font-bold tracking-widest uppercase mb-0.5">
+                  Round {state.currentRound} of {state.totalRounds}
+                </p>
+                <p className="font-cinzel text-2xl font-bold text-gray-900 leading-tight">
+                  {currentPhase?.label ?? ''}
+                </p>
+                {nextPhase && (
+                  <p className="text-gray-400 text-sm mt-1">
+                    Next: <span className="text-gray-600 font-medium">{nextPhase.label}</span> in {formatTime(nextPhase.inMs)}
                   </p>
-                  <p className="font-cinzel text-amber-300 text-xl font-bold">{phaseLabel}</p>
-                  {nextPhase && (
-                    <p className="text-amber-700 text-xs mt-0.5">
-                      Volgende: {nextPhase.label} over {formatTime(nextPhase.inMs)}
-                    </p>
-                  )}
-                </div>
-                <div className="text-right">
-                  <div
-                    className="font-cinzel font-black tabular-nums"
-                    style={{
-                      fontSize: 'clamp(2.5rem, 8vw, 5rem)',
-                      color: remainingMs < 600000 ? '#ef4444' : remainingMs < 1800000 ? '#f59e0b' : '#c9a84c',
-                      textShadow: '0 0 20px rgba(201,168,76,0.4)',
-                      lineHeight: 1,
-                    }}
-                  >
-                    {formatTime(remainingMs)}
-                  </div>
-                  <p className="text-amber-700 text-xs">resterend</p>
-                </div>
+                )}
               </div>
-              <PhaseTimeline remainingMs={remainingMs} />
+              <div className="text-right shrink-0">
+                <div className={`font-cinzel font-black tabular-nums leading-none ${timerColor}`}
+                  style={{ fontSize: 'clamp(2.5rem, 7vw, 5rem)' }}>
+                  {formatTime(remainingMs)}
+                </div>
+                <p className="text-gray-400 text-xs mt-1">remaining</p>
+              </div>
             </div>
-          )}
-        </div>
+            <Timeline remainingMs={remainingMs} />
+          </div>
+        )}
 
-        {/* Tables + Battleplan row */}
-        {(showTables || showBattleplan) && (
-          <div className="w-full flex gap-4 flex-1">
+        {/* === FINISHED === */}
+        {state.phase === 'finished' && (
+          <div className="rounded-2xl border-2 border-blue-200 bg-blue-50 p-10 text-center">
+            <p className="font-cinzel text-4xl font-black text-blue-800 mb-4">Tournament Complete</p>
+            {state.announcementText && (
+              <p className="text-gray-700 text-xl whitespace-pre-line leading-relaxed">
+                {state.announcementText}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* === TABLES + BATTLEPLAN === */}
+        {(showTables || showBattleplan) && state.phase !== 'finished' && (
+          <div className="flex gap-5 flex-1 min-h-0">
             {/* Table assignments */}
             {showTables && (
-              <div
-                className="flex-1 rounded-xl border p-4"
-                style={{ borderColor: '#8b6914', background: 'rgba(19,15,7,0.8)' }}
-              >
-                <h2 className="font-cinzel text-amber-500 text-sm tracking-widest uppercase mb-3 text-center">
-                  Tafelverdeling — Ronde {tableRound}
+              <div className="flex-1 rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-sm overflow-hidden">
+                <h2 className="font-cinzel text-gray-500 text-xs font-bold tracking-widest uppercase mb-4 text-center">
+                  Table Assignments — Round {displayRoundIndex + 1}
                 </h2>
-                {tableRoundConfig ? (
-                  <TableGrid state={{ ...state, currentRound: tableRound }} />
-                ) : (
-                  <p className="text-amber-800 text-center text-sm">Nog geen tafels ingevoerd</p>
-                )}
+                <TableGrid state={state} roundIndex={displayRoundIndex} />
               </div>
             )}
 
             {/* Battleplan */}
-            {showBattleplan && battleplan && (
-              <div
-                className="rounded-xl border p-3 flex flex-col items-center"
-                style={{ borderColor: '#8b6914', background: 'rgba(19,15,7,0.8)', minWidth: 220 }}
-              >
-                <h2 className="font-cinzel text-amber-500 text-sm tracking-widest uppercase mb-2">
-                  Battleplan {battleplan}
+            {showBattleplan && battleplanNum && (
+              <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-sm flex flex-col items-center"
+                style={{ minWidth: 240, maxWidth: 320 }}>
+                <h2 className="font-cinzel text-gray-500 text-xs font-bold tracking-widest uppercase mb-1 text-center">
+                  Battleplan
                 </h2>
+                <p className="font-cinzel text-gray-800 font-bold text-sm text-center mb-3">
+                  {BATTLEPLANS[battleplanNum]}
+                </p>
                 <img
-                  src={`${BASE}battleplan${battleplan}.png`}
-                  alt={`Battleplan ${battleplan}`}
-                  className="rounded-lg object-contain"
-                  style={{ maxHeight: '40vh', maxWidth: 300 }}
+                  src={`${BASE}battleplan${battleplanNum}.png`}
+                  alt={BATTLEPLANS[battleplanNum]}
+                  className="rounded-xl object-contain flex-1"
+                  style={{ maxHeight: '55vh', maxWidth: '100%' }}
                 />
               </div>
             )}
@@ -288,8 +284,8 @@ export default function PublicDisplay({ state }: Props) {
         )}
       </div>
 
-      {/* Bottom border */}
-      <div className="w-full h-px" style={{ background: 'linear-gradient(90deg, transparent, #8b6914, transparent)' }} />
+      {/* Bottom accent */}
+      <div className="h-1 bg-blue-800 w-full" />
     </div>
   );
 }

@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import type { TournamentState } from './types';
 
-export function useCountdown(state: TournamentState) {
-  const [remainingMs, setRemainingMs] = useState<number>(0);
+export function useCountdown(state: TournamentState): number {
+  const [remainingMs, setRemainingMs] = useState<number>(
+    state.timerRunning && state.timerEndMs
+      ? Math.max(0, state.timerEndMs - Date.now())
+      : (state.timerRemainingMs ?? 0)
+  );
 
   useEffect(() => {
     if (!state.timerRunning) {
@@ -11,10 +15,7 @@ export function useCountdown(state: TournamentState) {
     }
     if (state.timerEndMs === null) return;
 
-    const tick = () => {
-      const ms = Math.max(0, state.timerEndMs! - Date.now());
-      setRemainingMs(ms);
-    };
+    const tick = () => setRemainingMs(Math.max(0, state.timerEndMs! - Date.now()));
     tick();
     const id = setInterval(tick, 250);
     return () => clearInterval(id);

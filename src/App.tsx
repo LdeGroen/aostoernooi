@@ -4,7 +4,7 @@ import AdminPanel from './AdminPanel';
 import { useTournament } from './useTournament';
 
 function App() {
-  const tournament = useTournament();
+  const t = useTournament();
 
   return (
     <HashRouter>
@@ -13,10 +13,10 @@ function App() {
           path="/"
           element={
             <div className="relative">
-              <PublicDisplay state={tournament.state} />
+              <PublicDisplay state={t.state} />
               <Link
                 to="/admin"
-                className="fixed bottom-3 right-3 text-amber-900/40 hover:text-amber-700 text-xs font-cinzel transition-colors"
+                className="fixed bottom-3 right-4 text-gray-300 hover:text-gray-500 text-xs transition-colors select-none"
               >
                 admin
               </Link>
@@ -27,20 +27,24 @@ function App() {
           path="/admin"
           element={
             <AdminPanel
-              state={tournament.state}
-              updateTitle={tournament.updateTitle}
-              updateNumTables={tournament.updateNumTables}
-              updateBreakDuration={tournament.updateBreakDuration}
-              updateTable={tournament.updateTable}
-              updateBattleplan={tournament.updateBattleplan}
-              startRound={tournament.startRound}
-              startBreak={tournament.startBreak}
-              pauseTimer={tournament.pauseTimer}
-              resumeTimer={tournament.resumeTimer}
-              adjustTimer={tournament.adjustTimer}
-              setFinished={tournament.setFinished}
-              resetAll={tournament.resetAll}
-              setPreTournament={tournament.setPreTournament}
+              state={t.state}
+              updateTitle={t.updateTitle}
+              updateNumTables={t.updateNumTables}
+              updatePreGame={t.updatePreGame}
+              updateLunchBreak={t.updateLunchBreak}
+              updateShortBreak={t.updateShortBreak}
+              updateAnnouncementText={t.updateAnnouncementText}
+              updateTable={t.updateTable}
+              updateBattleplan={t.updateBattleplan}
+              startPreGame={t.startPreGame}
+              startRound={t.startRound}
+              startBreak={t.startBreak}
+              pauseTimer={t.pauseTimer}
+              resumeTimer={t.resumeTimer}
+              adjustTimer={t.adjustTimer}
+              setFinished={t.setFinished}
+              setPreTournament={t.setPreTournament}
+              resetAll={t.resetAll}
             />
           }
         />
