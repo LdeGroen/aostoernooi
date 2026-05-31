@@ -61,10 +61,10 @@ export const BATTLEPLANS: Record<number, string> = {
 // Round is 3h = 180 min; phases count DOWN
 export const ROUND_PHASES = [
   { minRemaining: 170, label: 'Pre-game discussions & decisions' },
-  { minRemaining: 110, label: 'Deployment' },
-  { minRemaining: 70,  label: 'Battle Round 1' },
-  { minRemaining: 40,  label: 'Battle Round 2' },
-  { minRemaining: 20,  label: 'Battle Round 3' },
-  { minRemaining: 10,  label: 'Battle Round 4' },
+  { minRemaining: 150, label: 'Deployment' },
+  { minRemaining: 110, label: 'Battle Round 1' },
+  { minRemaining: 70,  label: 'Battle Round 2' },
+  { minRemaining: 40,  label: 'Battle Round 3' },
+  { minRemaining: 20,  label: 'Battle Round 4' },
   { minRemaining: 0,   label: 'Battle Round 5 — ask a judge before starting a new BR' },
 ] as const;

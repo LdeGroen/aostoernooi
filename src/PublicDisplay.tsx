@@ -8,11 +8,11 @@ const BASE = import.meta.env.BASE_URL;
 const PHASE_MILESTONES = [
   { elapsedMin: 0,   label: 'Start',      short: 'Start' },
   { elapsedMin: 10,  label: 'Deployment', short: 'Deploy' },
-  { elapsedMin: 70,  label: 'BR 1',       short: 'BR1' },
-  { elapsedMin: 110, label: 'BR 2',       short: 'BR2' },
-  { elapsedMin: 140, label: 'BR 3',       short: 'BR3' },
-  { elapsedMin: 160, label: 'BR 4',       short: 'BR4' },
-  { elapsedMin: 170, label: 'BR 5',       short: 'BR5' },
+  { elapsedMin: 30,  label: 'BR 1',       short: 'BR1' },
+  { elapsedMin: 70,  label: 'BR 2',       short: 'BR2' },
+  { elapsedMin: 110, label: 'BR 3',       short: 'BR3' },
+  { elapsedMin: 140, label: 'BR 4',       short: 'BR4' },
+  { elapsedMin: 160, label: 'BR 5',       short: 'BR5' },
 ];
 
 function getCurrentPhase(remainingMs: number) {
