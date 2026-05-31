@@ -101,19 +101,29 @@ function TableGrid({ state, roundIndex }: { state: TournamentState; roundIndex: 
     <p className="text-gray-400 text-center py-4 text-lg">No table assignments entered yet</p>
   );
 
-  const cols = tables.length <= 4 ? 1 : tables.length <= 8 ? 2 : 3;
+  const n = tables.length;
+  const cols = n <= 6 ? 1 : n <= 14 ? 2 : 3;
+  const rowsPerCol = Math.ceil(n / cols);
+  // Fewer rows per column → taller bars → larger text.
+  const tier = rowsPerCol <= 4 ? 'lg' : rowsPerCol <= 6 ? 'md' : rowsPerCol <= 9 ? 'sm' : 'xs';
+  const numCls = { lg: 'text-3xl', md: 'text-2xl', sm: 'text-xl', xs: 'text-base' }[tier];
+  const nameCls = { lg: 'text-2xl', md: 'text-xl', sm: 'text-lg', xs: 'text-sm' }[tier];
+  const padX = { lg: 'px-5', md: 'px-4', sm: 'px-3', xs: 'px-2.5' }[tier];
 
   return (
-    <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+    <div
+      className="grid gap-2 h-full"
+      style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridAutoRows: '1fr' }}
+    >
       {tables.map(t => (
         <div
           key={t.tableNumber}
-          className="flex items-center gap-3 px-6 py-5 rounded-xl border-2 border-gray-200 bg-gray-50"
+          className={`flex items-center gap-2 ${padX} rounded-xl border-2 border-gray-200 bg-gray-50 overflow-hidden min-h-0`}
         >
-          <span className="text-blue-700 font-black font-cinzel text-3xl w-10 text-center shrink-0">{t.tableNumber}</span>
-          <span className="flex-1 text-gray-900 font-semibold text-2xl truncate">{nameOf(t.player1Id) || '—'}</span>
-          <span className="text-gray-400 font-medium text-base px-2">vs</span>
-          <span className="flex-1 text-gray-900 font-semibold text-2xl truncate text-right">{nameOf(t.player2Id) || '—'}</span>
+          <span className={`text-blue-700 font-black font-cinzel ${numCls} text-center shrink-0`} style={{ minWidth: '1.4em' }}>{t.tableNumber}</span>
+          <span className={`flex-1 text-gray-900 font-semibold ${nameCls} truncate`}>{nameOf(t.player1Id) || '—'}</span>
+          <span className="text-gray-400 font-medium text-sm px-1 shrink-0">vs</span>
+          <span className={`flex-1 text-gray-900 font-semibold ${nameCls} truncate text-right`}>{nameOf(t.player2Id) || '—'}</span>
         </div>
       ))}
     </div>
@@ -157,12 +167,12 @@ export default function PublicDisplay({ state }: { state: TournamentState }) {
     : 'text-gray-900';
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="h-screen overflow-hidden bg-white flex flex-col">
       {/* Top accent bar */}
-      <div className="h-1.5 bg-blue-800 w-full" />
+      <div className="h-1.5 bg-blue-800 w-full shrink-0" />
 
       {/* Title */}
-      <div className="text-center py-5 px-8 border-b border-gray-200">
+      <div className="text-center py-4 px-8 border-b border-gray-200 shrink-0">
         <h1
           className="font-cinzel font-black tracking-widest uppercase text-gray-900"
           style={{ fontSize: 'clamp(2rem, 5.5vw, 4.5rem)', letterSpacing: '0.12em' }}
@@ -175,7 +185,7 @@ export default function PublicDisplay({ state }: { state: TournamentState }) {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col p-6 gap-5 max-w-screen-2xl mx-auto w-full">
+      <div className="flex-1 min-h-0 flex flex-col p-4 gap-4 max-w-screen-2xl mx-auto w-full">
 
         {/* === PRE-TOURNAMENT === */}
         {state.phase === 'pre-tournament' && (
@@ -284,33 +294,36 @@ export default function PublicDisplay({ state }: { state: TournamentState }) {
 
         {/* === TABLES + BATTLEPLAN === */}
         {(showTables || showBattleplan) && state.phase !== 'finished' && (
-          <div className="flex gap-5 flex-1 min-h-0">
+          <div className="flex gap-4 flex-1 min-h-0">
             {/* Table assignments */}
             {showTables && (
-              <div className="flex-1 rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-sm overflow-hidden">
-                <h2 className="font-cinzel text-gray-500 text-xs font-bold tracking-widest uppercase mb-4 text-center">
+              <div className="flex-1 min-w-0 rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-sm flex flex-col min-h-0 overflow-hidden">
+                <h2 className="font-cinzel text-gray-500 text-xs font-bold tracking-widest uppercase mb-3 text-center shrink-0">
                   Table Assignments — Round {displayRoundIndex + 1}
                 </h2>
-                <TableGrid state={state} roundIndex={displayRoundIndex} />
+                <div className="flex-1 min-h-0">
+                  <TableGrid state={state} roundIndex={displayRoundIndex} />
+                </div>
               </div>
             )}
 
-            {/* Battleplan */}
+            {/* Battleplan — scales to fill the remaining space */}
             {showBattleplan && battleplanNum && (
-              <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-sm flex flex-col items-center"
-                style={{ minWidth: 560, maxWidth: 820 }}>
-                <h2 className="font-cinzel text-gray-500 text-xs font-bold tracking-widest uppercase mb-1 text-center">
+              <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-sm flex flex-col items-center min-h-0"
+                style={{ flex: '0 1 760px', maxWidth: 820, minWidth: 0 }}>
+                <h2 className="font-cinzel text-gray-500 text-xs font-bold tracking-widest uppercase mb-1 text-center shrink-0">
                   Battleplan
                 </h2>
-                <p className="font-cinzel text-gray-800 font-bold text-xl text-center mb-3">
+                <p className="font-cinzel text-gray-800 font-bold text-xl text-center mb-2 shrink-0">
                   {BATTLEPLANS[battleplanNum]}
                 </p>
-                <img
-                  src={`${BASE}battleplan${battleplanNum}.png`}
-                  alt={BATTLEPLANS[battleplanNum]}
-                  className="rounded-xl object-contain flex-1"
-                  style={{ maxHeight: '82vh', maxWidth: '100%' }}
-                />
+                <div className="flex-1 min-h-0 w-full flex items-center justify-center">
+                  <img
+                    src={`${BASE}battleplan${battleplanNum}.png`}
+                    alt={BATTLEPLANS[battleplanNum]}
+                    className="rounded-xl object-contain w-full h-full"
+                  />
+                </div>
               </div>
             )}
           </div>
