@@ -172,16 +172,32 @@ export default function PublicDisplay({ state }: { state: TournamentState }) {
       <div className="h-1.5 bg-blue-800 w-full shrink-0" />
 
       {/* Title */}
-      <div className="text-center py-4 px-8 border-b border-gray-200 shrink-0">
-        <h1
-          className="font-cinzel font-black tracking-widest uppercase text-gray-900"
-          style={{ fontSize: 'clamp(2rem, 5.5vw, 4.5rem)', letterSpacing: '0.12em' }}
-        >
-          {state.title}
-        </h1>
-        <p className="text-blue-700 text-xs font-semibold tracking-widest uppercase mt-1">
-          Warhammer Age of Sigmar
-        </p>
+      <div className="flex items-center gap-4 py-4 px-8 border-b border-gray-200 shrink-0">
+        {state.logoDataUrl && (
+          <div className="shrink-0 flex items-center justify-start" style={{ width: 'clamp(96px, 14vw, 200px)' }}>
+            <img
+              src={state.logoDataUrl}
+              alt="Event logo"
+              className="object-contain max-w-full"
+              style={{ maxHeight: 'clamp(2.5rem, 9vh, 5.5rem)' }}
+            />
+          </div>
+        )}
+        <div className="flex-1 text-center min-w-0">
+          <h1
+            className="font-cinzel font-black tracking-widest uppercase text-gray-900"
+            style={{ fontSize: 'clamp(2rem, 5.5vw, 4.5rem)', letterSpacing: '0.12em' }}
+          >
+            {state.title}
+          </h1>
+          <p className="text-blue-700 text-xs font-semibold tracking-widest uppercase mt-1">
+            Warhammer Age of Sigmar
+          </p>
+        </div>
+        {/* Spacer to keep the title centered opposite the logo */}
+        {state.logoDataUrl && (
+          <div className="shrink-0" style={{ width: 'clamp(96px, 14vw, 200px)' }} aria-hidden />
+        )}
       </div>
 
       {/* Main content */}

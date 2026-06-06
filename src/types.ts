@@ -23,6 +23,7 @@ export interface RoundConfig {
 
 export interface TournamentState {
   title: string;
+  logoDataUrl: string | null;
   players: Player[];
   numTables: number;
   totalRounds: number;

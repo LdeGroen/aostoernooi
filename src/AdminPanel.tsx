@@ -15,6 +15,7 @@ const BASE = import.meta.env.BASE_URL;
 interface Props {
   state: TournamentState;
   updateTitle: (t: string) => void;
+  updateLogo: (dataUrl: string | null) => void;
   addPlayer: (name: string) => void;
   updatePlayerName: (id: string, name: string) => void;
   removePlayer: (id: string) => void;
@@ -356,6 +357,81 @@ function PlayersCard({ players, addPlayer, updatePlayerName, removePlayer }: {
   );
 }
 
+// Read an image file and downscale it to a reasonable size, returning a PNG
+// data URL (keeps transparency, keeps localStorage small).
+function fileToLogoDataUrl(file: File, maxSize = 512): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('no canvas context'));
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function LogoCard({ logoDataUrl, updateLogo }: {
+  logoDataUrl: string | null;
+  updateLogo: Props['updateLogo'];
+}) {
+  const [error, setError] = useState('');
+  const onFile = async (file: File | undefined) => {
+    setError('');
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setError('Please choose an image file.'); return; }
+    try {
+      updateLogo(await fileToLogoDataUrl(file));
+    } catch {
+      setError('Could not read that image.');
+    }
+  };
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-4">
+        {logoDataUrl ? (
+          <img src={logoDataUrl} alt="logo" className="h-20 w-20 object-contain rounded-lg border border-gray-200 bg-gray-50 p-1" />
+        ) : (
+          <div className="h-20 w-20 rounded-lg border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center text-gray-300 text-xs text-center px-1">
+            No logo
+          </div>
+        )}
+        <div className="flex flex-col gap-2">
+          <label className="inline-block">
+            <span className="rounded-lg px-3 py-2 text-sm font-medium border bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 cursor-pointer">
+              {logoDataUrl ? 'Replace logo' : 'Upload logo'}
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={e => { onFile(e.target.files?.[0]); e.target.value = ''; }}
+            />
+          </label>
+          {logoDataUrl && (
+            <Btn onClick={() => updateLogo(null)} variant="danger">Remove logo</Btn>
+          )}
+        </div>
+      </div>
+      <p className="text-gray-400 text-xs">PNG or JPG. Shown on the big screen next to the title.</p>
+      {error && <p className="text-red-500 text-xs">{error}</p>}
+    </div>
+  );
+}
+
 export default function AdminPanel(props: Props) {
   const { state } = props;
   const [authenticated, setAuthenticated] = useState(false);
@@ -501,6 +577,11 @@ export default function AdminPanel(props: Props) {
               <NumInput label="Short Break (min)" value={state.shortBreakMinutes} onChange={props.updateShortBreak} />
             </div>
           </div>
+        </Card>
+
+        {/* === EVENT LOGO === */}
+        <Card title="Event Logo">
+          <LogoCard logoDataUrl={state.logoDataUrl} updateLogo={props.updateLogo} />
         </Card>
 
         {/* === PLAYERS === */}

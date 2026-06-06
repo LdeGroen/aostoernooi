@@ -67,6 +67,7 @@ function App() {
             <AdminPanel
               state={t.state}
               updateTitle={t.updateTitle}
+              updateLogo={t.updateLogo}
               addPlayer={t.addPlayer}
               updatePlayerName={t.updatePlayerName}
               removePlayer={t.removePlayer}

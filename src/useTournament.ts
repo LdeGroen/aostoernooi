@@ -27,6 +27,7 @@ function defaultRound(numTables: number): RoundConfig {
 function getDefault(totalRounds = 3): TournamentState {
   return {
     title: 'Gelderland Invitational II',
+    logoDataUrl: null,
     players: [],
     numTables: 0,
     totalRounds,
@@ -137,6 +138,8 @@ export function useTournament() {
   // --- Settings ---
 
   const updateTitle = (title: string) => setState(s => ({ ...s, title }));
+
+  const updateLogo = (logoDataUrl: string | null) => setState(s => ({ ...s, logoDataUrl }));
 
   // Resize every round's table list to match the player count (ceil/2),
   // preserving existing assignments where they still fit.
@@ -310,6 +313,7 @@ export function useTournament() {
   return {
     state,
     updateTitle,
+    updateLogo,
     addPlayer,
     updatePlayerName,
     removePlayer,
