@@ -174,12 +174,12 @@ export default function PublicDisplay({ state }: { state: TournamentState }) {
       {/* Title */}
       <div className="flex items-center gap-4 py-4 px-8 border-b border-gray-200 shrink-0">
         {state.logoDataUrl && (
-          <div className="shrink-0 flex items-center justify-start" style={{ width: 'clamp(96px, 14vw, 200px)' }}>
+          <div className="shrink-0 flex items-center justify-start" style={{ width: 'clamp(110px, 13vw, 190px)' }}>
             <img
               src={state.logoDataUrl}
               alt="Event logo"
               className="object-contain max-w-full"
-              style={{ maxHeight: 'clamp(2.5rem, 9vh, 5.5rem)' }}
+              style={{ maxHeight: 'clamp(3.5rem, 12vh, 7rem)' }}
             />
           </div>
         )}
