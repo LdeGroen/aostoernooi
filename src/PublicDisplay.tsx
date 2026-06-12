@@ -1,9 +1,51 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useState, useLayoutEffect } from 'react';
 import type { TournamentState } from './types';
 import { ROUND_PHASES, BATTLEPLANS } from './types';
 import { useCountdown, formatTime } from './useCountdown';
 
 const BASE = import.meta.env.BASE_URL;
+
+// Renders text on a single line, scaling the font down to fit its container
+// instead of truncating, so distinguishing names (e.g. "Thomas M" vs
+// "Thomas D") stay readable.
+function FitText({ text, align = 'left', className = '' }: {
+  text: string;
+  align?: 'left' | 'right';
+  className?: string;
+}) {
+  const innerRef = useRef<HTMLSpanElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const el = innerRef.current;
+    const parent = el?.parentElement;
+    if (!el || !parent) return;
+    const measure = () => {
+      const prev = el.style.transform;
+      el.style.transform = 'none';
+      const natural = el.offsetWidth;
+      el.style.transform = prev;
+      const available = parent.clientWidth;
+      setScale(natural > available && natural > 0 ? Math.max(0.55, available / natural) : 1);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(parent);
+    return () => ro.disconnect();
+  }, [text]);
+
+  return (
+    <span className={`block overflow-hidden ${align === 'right' ? 'text-right' : ''}`}>
+      <span
+        ref={innerRef}
+        className={`inline-block whitespace-nowrap ${className}`}
+        style={{ transform: `scale(${scale})`, transformOrigin: align === 'right' ? 'right center' : 'left center' }}
+      >
+        {text}
+      </span>
+    </span>
+  );
+}
 
 const PHASE_MILESTONES = [
   { elapsedMin: 0,   label: 'Start',      short: 'Start' },
@@ -121,9 +163,13 @@ function TableGrid({ state, roundIndex }: { state: TournamentState; roundIndex: 
           className={`flex items-center gap-2 ${padX} rounded-xl border-2 border-gray-200 bg-gray-50 overflow-hidden min-h-0`}
         >
           <span className={`text-blue-700 font-black font-cinzel ${numCls} text-center shrink-0`} style={{ minWidth: '1.4em' }}>{t.tableNumber}</span>
-          <span className={`flex-1 text-gray-900 font-semibold ${nameCls} truncate`}>{nameOf(t.player1Id) || '—'}</span>
+          <div className="flex-1 min-w-0">
+            <FitText text={nameOf(t.player1Id) || '—'} align="left" className={`text-gray-900 font-semibold ${nameCls}`} />
+          </div>
           <span className="text-gray-400 font-medium text-sm px-1 shrink-0">vs</span>
-          <span className={`flex-1 text-gray-900 font-semibold ${nameCls} truncate text-right`}>{nameOf(t.player2Id) || '—'}</span>
+          <div className="flex-1 min-w-0">
+            <FitText text={nameOf(t.player2Id) || '—'} align="right" className={`text-gray-900 font-semibold ${nameCls}`} />
+          </div>
         </div>
       ))}
     </div>
