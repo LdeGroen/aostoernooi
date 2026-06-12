@@ -153,9 +153,12 @@ export default function PublicDisplay({ state }: { state: TournamentState }) {
 
   const showBattleplan = showTables;
 
-  const displayRoundIndex = state.phase === 'break'
-    ? state.currentRound      // show next round's tables during break
-    : state.currentRound - 1;
+  const displayRoundIndex =
+    state.phase === 'pre-tournament' || state.phase === 'pre-game'
+      ? 0                       // before round 1 starts, show round 1's tables
+      : state.phase === 'break'
+      ? state.currentRound      // show next round's tables during break
+      : state.currentRound - 1;
 
   const roundConfig = state.rounds[displayRoundIndex] ?? state.rounds[0];
   const battleplanNum = roundConfig?.battleplan ?? null;
