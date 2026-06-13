@@ -157,6 +157,8 @@ function TableGrid({ state, roundIndex }: { state: TournamentState; roundIndex: 
   // Measure the actual height available per row and derive font sizes from it,
   // so names fill the row on any screen — large when there's room, smaller
   // (but never clipped) when there are many tables or less vertical space.
+  // Re-measure on element resize AND window resize, so going fullscreen on a
+  // big TV mid-session enlarges the names instead of leaving them small.
   useLayoutEffect(() => {
     const el = gridRef.current;
     if (!el) return;
@@ -165,23 +167,32 @@ function TableGrid({ state, roundIndex }: { state: TournamentState; roundIndex: 
       setRowH(innerH > 0 ? innerH : 0);
     };
     measure();
+    // A second pass after layout settles (initial mount / fullscreen switch).
+    const raf = requestAnimationFrame(measure);
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    return () => ro.disconnect();
+    window.addEventListener('resize', measure);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
   }, [rowsPerCol, n]);
 
   if (tables.length === 0) return (
     <p className="text-gray-400 text-center py-4 text-lg">No table assignments entered yet</p>
   );
 
-  // Row content height minus the 2px top/bottom border. Names take ~42% of it,
-  // the table number is a touch larger, "vs" smaller. Clamped so it stays sane
-  // before the first measurement and on extreme aspect ratios.
+  // Row content height minus the 2px top/bottom border. Names take ~45% of it
+  // so they fill the row on any resolution (a 4K TV gets large names, not a
+  // tiny capped size); the table number is a touch larger, "vs" smaller. The
+  // generous max only guards the extreme single-table case — FitText shrinks
+  // any name that would be too wide, so it can never overlap the divider.
   const contentH = Math.max(0, rowH - 4);
-  const nameFont = Math.min(56, Math.max(13, contentH * 0.42));
-  const numFont = Math.min(64, nameFont * 1.2);
-  const vsFont = Math.max(10, nameFont * 0.5);
-  const padX = rowsPerCol <= 6 ? 'px-5' : 'px-3';
+  const nameFont = Math.min(150, Math.max(13, contentH * 0.45));
+  const numFont = Math.min(170, nameFont * 1.15);
+  const vsFont = Math.max(10, nameFont * 0.45);
+  const padX = rowsPerCol <= 6 ? 'px-6' : 'px-4';
 
   return (
     <div
@@ -192,7 +203,7 @@ function TableGrid({ state, roundIndex }: { state: TournamentState; roundIndex: 
       {tables.map(t => (
         <div
           key={t.tableNumber}
-          className={`flex items-center gap-2 ${padX} rounded-xl border-2 border-gray-200 bg-gray-50 overflow-hidden min-h-0`}
+          className={`flex items-center gap-4 ${padX} rounded-xl border-2 border-gray-200 bg-gray-50 overflow-hidden min-h-0`}
         >
           <span
             className="text-blue-700 font-black font-cinzel text-center shrink-0"
