@@ -5,11 +5,13 @@ import { useCountdown, formatTime } from './useCountdown';
 
 const BASE = import.meta.env.BASE_URL;
 
-// Renders text on a single line, scaling the font down to fit its container
-// instead of truncating, so distinguishing names (e.g. "Thomas M" vs
-// "Thomas D") stay readable.
-function FitText({ text, align = 'left', className = '' }: {
+// Renders text on a single line at the given font size, scaling the font down
+// to fit its container instead of truncating, so distinguishing names
+// (e.g. "Thomas M" vs "Thomas D") stay readable. The font size is driven by
+// the available row height (see TableGrid) so names grow to fill the screen.
+function FitText({ text, fontSize, align = 'left', className = '' }: {
   text: string;
+  fontSize: number;
   align?: 'left' | 'right';
   className?: string;
 }) {
@@ -26,20 +28,25 @@ function FitText({ text, align = 'left', className = '' }: {
       const natural = el.offsetWidth;
       el.style.transform = prev;
       const available = parent.clientWidth;
-      setScale(natural > available && natural > 0 ? Math.max(0.55, available / natural) : 1);
+      setScale(natural > available && natural > 0 ? Math.max(0.5, available / natural) : 1);
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(parent);
     return () => ro.disconnect();
-  }, [text]);
+  }, [text, fontSize]);
 
   return (
     <span className={`block overflow-hidden ${align === 'right' ? 'text-right' : ''}`}>
       <span
         ref={innerRef}
         className={`inline-block whitespace-nowrap ${className}`}
-        style={{ transform: `scale(${scale})`, transformOrigin: align === 'right' ? 'right center' : 'left center' }}
+        style={{
+          fontSize,
+          lineHeight: 1.1,
+          transform: `scale(${scale})`,
+          transformOrigin: align === 'right' ? 'right center' : 'left center',
+        }}
       >
         {text}
       </span>
@@ -135,25 +142,50 @@ function Timeline({ remainingMs, large = false }: { remainingMs: number; large?:
 }
 
 function TableGrid({ state, roundIndex }: { state: TournamentState; roundIndex: number }) {
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [rowH, setRowH] = useState(0);
+
   const round = state.rounds[roundIndex];
-  if (!round) return null;
   const nameOf = (id: string | null) => state.players.find(p => p.id === id)?.name ?? '';
-  const tables = round.tables.filter(t => t.player1Id || t.player2Id);
+  const tables = round ? round.tables.filter(t => t.player1Id || t.player2Id) : [];
+
+  const n = tables.length;
+  const cols = n <= 6 ? 1 : n <= 14 ? 2 : 3;
+  const rowsPerCol = Math.max(1, Math.ceil(n / cols));
+  const gapPx = 8; // matches gap-2
+
+  // Measure the actual height available per row and derive font sizes from it,
+  // so names fill the row on any screen — large when there's room, smaller
+  // (but never clipped) when there are many tables or less vertical space.
+  useLayoutEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const measure = () => {
+      const innerH = (el.clientHeight - (rowsPerCol - 1) * gapPx) / rowsPerCol;
+      setRowH(innerH > 0 ? innerH : 0);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [rowsPerCol, n]);
+
   if (tables.length === 0) return (
     <p className="text-gray-400 text-center py-4 text-lg">No table assignments entered yet</p>
   );
 
-  const n = tables.length;
-  const cols = n <= 6 ? 1 : n <= 14 ? 2 : 3;
-  const rowsPerCol = Math.ceil(n / cols);
-  // Fewer rows per column → taller bars → larger text.
-  const tier = rowsPerCol <= 4 ? 'lg' : rowsPerCol <= 6 ? 'md' : rowsPerCol <= 9 ? 'sm' : 'xs';
-  const numCls = { lg: 'text-3xl', md: 'text-2xl', sm: 'text-xl', xs: 'text-base' }[tier];
-  const nameCls = { lg: 'text-2xl', md: 'text-xl', sm: 'text-lg', xs: 'text-sm' }[tier];
-  const padX = { lg: 'px-5', md: 'px-4', sm: 'px-3', xs: 'px-2.5' }[tier];
+  // Row content height minus the 2px top/bottom border. Names take ~42% of it,
+  // the table number is a touch larger, "vs" smaller. Clamped so it stays sane
+  // before the first measurement and on extreme aspect ratios.
+  const contentH = Math.max(0, rowH - 4);
+  const nameFont = Math.min(56, Math.max(13, contentH * 0.42));
+  const numFont = Math.min(64, nameFont * 1.2);
+  const vsFont = Math.max(10, nameFont * 0.5);
+  const padX = rowsPerCol <= 6 ? 'px-5' : 'px-3';
 
   return (
     <div
+      ref={gridRef}
       className="grid gap-2 h-full"
       style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridAutoRows: '1fr' }}
     >
@@ -162,13 +194,18 @@ function TableGrid({ state, roundIndex }: { state: TournamentState; roundIndex: 
           key={t.tableNumber}
           className={`flex items-center gap-2 ${padX} rounded-xl border-2 border-gray-200 bg-gray-50 overflow-hidden min-h-0`}
         >
-          <span className={`text-blue-700 font-black font-cinzel ${numCls} text-center shrink-0`} style={{ minWidth: '1.4em' }}>{t.tableNumber}</span>
+          <span
+            className="text-blue-700 font-black font-cinzel text-center shrink-0"
+            style={{ minWidth: '1.4em', fontSize: numFont, lineHeight: 1 }}
+          >
+            {t.tableNumber}
+          </span>
           <div className="flex-1 min-w-0">
-            <FitText text={nameOf(t.player1Id) || '—'} align="left" className={`text-gray-900 font-semibold ${nameCls}`} />
+            <FitText text={nameOf(t.player1Id) || '—'} fontSize={nameFont} align="left" className="text-gray-900 font-semibold" />
           </div>
-          <span className="text-gray-400 font-medium text-sm px-1 shrink-0">vs</span>
+          <span className="text-gray-400 font-medium px-1 shrink-0" style={{ fontSize: vsFont }}>vs</span>
           <div className="flex-1 min-w-0">
-            <FitText text={nameOf(t.player2Id) || '—'} align="right" className={`text-gray-900 font-semibold ${nameCls}`} />
+            <FitText text={nameOf(t.player2Id) || '—'} fontSize={nameFont} align="right" className="text-gray-900 font-semibold" />
           </div>
         </div>
       ))}
