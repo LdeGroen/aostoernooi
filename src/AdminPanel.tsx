@@ -230,7 +230,7 @@ function RoundEditor({ state, roundIndex, assignSlot, clearSlot, swapSlots, upda
         {round.battleplan && (
           <div className="mt-2 flex items-center gap-3">
             <img
-              src={`${BASE}battleplan${round.battleplan}.png`}
+              src={`${BASE}battleplan${round.battleplan}.jpg`}
               alt="preview"
               className="h-28 rounded border border-gray-200 object-contain"
             />

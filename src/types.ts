@@ -48,20 +48,20 @@ export interface TournamentState {
   rounds: RoundConfig[];
 }
 
-// AoS 2025-26 General's Handbook battleplans
+// AoS General's Handbook 2026-27 battleplans (afbeeldingen: public/battleplan<n>.jpg)
 export const BATTLEPLANS: Record<number, string> = {
-  1:  'Passing Seasons',
-  2:  'Paths of the Fey',
-  3:  'Roiling Roots',
-  4:  'Cyclic Shifts',
-  5:  'Surge of Slaughter',
-  6:  'Linked Ley Lines',
-  7:  'Noxious Nexus',
-  8:  'The Liferoots',
-  9:  'Bountiful Equinox',
-  10: 'Lifecycle',
-  11: 'Creeping Corruption',
-  12: 'Grasp of Thorns',
+  1:  'Into the Fire',
+  2:  'Bloodstained Coasts',
+  3:  'Avalanche of Ash',
+  4:  'Caverns of Slaughter',
+  5:  "What's Yours is Ours",
+  6:  'Hidden Under Ash-Clouds',
+  7:  'Warped Ruins',
+  8:  'Curse of the Gnaw',
+  9:  'Seize the Embers',
+  10: 'Treacherous Ground',
+  11: 'Escape from the Coast',
+  12: 'Power of the Realms',
 };
 
 // Time remaining thresholds (in minutes) that mark phase transitions

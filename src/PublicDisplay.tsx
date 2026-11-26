@@ -432,7 +432,7 @@ export default function PublicDisplay({ state }: { state: TournamentState }) {
                 </p>
                 <div className="flex-1 min-h-0 w-full flex items-center justify-center">
                   <img
-                    src={`${BASE}battleplan${battleplanNum}.png`}
+                    src={`${BASE}battleplan${battleplanNum}.jpg`}
                     alt={BATTLEPLANS[battleplanNum]}
                     className="rounded-xl object-contain w-full h-full"
                   />
